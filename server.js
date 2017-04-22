@@ -164,22 +164,20 @@ function forceExit(client) {
     if (clientSocket.readyState === WebSocket.OPEN) {
         clientSocket.send(JSON.stringify({
             "name": "System",
-            "message": "Dein Account ist schon im Chat angemeldet.",
+            "message": "You are already connected to the chat.",
             "type": "disconnect"
         }));
     }
 }
 
 function initUserData(client) {
-    var sql = "SELECT COALESCE(benutzerdaten.chatname, charakter.vorname, benutzerdaten.profilname) AS nickname, benutzerdaten.usergruppe \n\
-                FROM benutzerdaten\n\
-                LEFT JOIN charakter\n\
-                    ON charakter.userId = benutzerdaten.userId AND charakter.active = 1\n\
-                WHERE benutzerdaten.userId = ? AND benutzerdaten.active = 1";
+    var sql = "SELECT chatname AS nickname, usergroup \n\
+                FROM users\n\
+                WHERE userId = ? AND isActive = 1";
     connection.execute(sql, [client.userId], function (err, result, fields) {
         if (!err) {
             if (result[0] == null) {
-                client.nickname = "Gast";
+                client.nickname = "Guest";
                 client.isAdmin = false;
             } else {
                 client.nickname = result[0].nickname;
@@ -188,7 +186,7 @@ function initUserData(client) {
             sendIntroMessage(client);
             updateUserList(1);
         } else {
-            console.log("Fehler");
+            console.log("Error in: initUserData");
             return false;
         }
     });
@@ -204,7 +202,6 @@ function selectRoomlist(cbFunction) {
                     "roomId": result[i].roomId,
                     "name": result[i].name,
                     "isHidden": result[i].isHidden === 1,
-                    "isRPG": result[i].isRPG ===1,
                     "creator": result[i].creator,
                     "description": result[i].description,
                     "entryMessage": result[i].entryMessage
@@ -215,10 +212,9 @@ function selectRoomlist(cbFunction) {
                 "roomId": 1,
                 "name": "Lobby",
                 "isHidden": false,
-                "isRPG": false,
                 "creator": 0,
-                "description": "OOC-Bereich",
-                "entryMessage": ""
+                "description": "Entry to the chat",
+                "entryMessage": "Hello"
             });
         }
         cbFunction(rooms);
@@ -235,22 +231,22 @@ function getRoomById(roomId, rooms) {
 }
 
 function sendIntroMessage(client) {
-    var message = "User " + client.nickname + " hat den Chat betreten.";
+    var message = "User " + client.nickname + " entered the chat";
     messageService.sendMessage("System", message, "message", client.roomId);
 }
 
 function sendExitMessage(client) {
-    var message = "User " + client.nickname + " hat den Chat verlassen.";
+    var message = "User " + client.nickname + " left the chat";
     messageService.sendMessage("System", message, "message", client.roomId);
 }
 
 function sendExitMessageRoom(client, oldRoomId) {
-    var message = "User " + client.nickname + " hat den Raum verlassen.";
+    var message = "User " + client.nickname + " left the room";
     messageService.sendMessage("System", message, "message", oldRoomId);
 }
 
 function sendJoinMessage(client, changeRoom) {
-    var message = client.nickname + " hat den Raum " + changeRoom.name + " betreten.";
+    var message = client.nickname + " entered the room " + changeRoom.name;
     messageService.sendMessage("System", message, "message", changeRoom.roomId);
 }
 
@@ -307,7 +303,7 @@ function rollDice(client, inMessage) {
         var maxPoints = diceSpecs[2] < 2 ? 2 : diceSpecs[2];
         if (diceSpecs[1] > 1 && diceSpecs[1] < 10) {
             var sum = 0;
-            var message = client.nickname + " packt den Würfelbecher und wirft mit " + diceSpecs[1] + " " + maxPoints + "-seitigen Würfeln: ";
+            var message = client.nickname + " rolls " + diceSpecs[1] + " " + maxPoints + "-sided dices: ";
             for (var i = 0; i < diceSpecs[1]; i++) {
                 var points = dice(maxPoints);
                 sum += points;
@@ -318,12 +314,12 @@ function rollDice(client, inMessage) {
                     message += ".";
                 }
             }
-            message += " Summe: " + sum;
+            message += " Sum: " + sum;
         } else {
-            var message = client.nickname + " packt den Würfelbecher und wirft mit einem " + maxPoints + "-seitigen Würfel: " + dice(maxPoints);
+            var message = client.nickname + " rolls a " + maxPoints + "-sided dice: " + dice(maxPoints);
         }
     } else {
-        var message = client.nickname + " packt den Würfelbecher und wirft mit einem 6-seitigen Würfel: " + dice(6);
+        var message = client.nickname + " rolls a dice: " + dice(6);
     }
     messageService.sendMessage("System", message, "message", client.roomId);
 }
@@ -333,7 +329,7 @@ function dice(maxPoints) {
 }
 
 function coinflip(client) {
-    var headsTails = dice(2) === 1 ? "Kopf" : "Zahl";
-    var message = client.nickname + " wirft eine Münze... sie landet und zeigt: " + headsTails;
+    var headsTails = dice(2) === 1 ? "Head" : "Tail";
+    var message = client.nickname + " throws a coin... : " + headsTails;
     messageService.sendMessage("System", message, "message", client.roomId);
 }
