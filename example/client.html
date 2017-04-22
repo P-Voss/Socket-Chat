@@ -1,0 +1,37 @@
+<html>
+    <head>
+        <title>Socket-Chat by P-Voss</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="css/chat.css"/>
+        <script src="https://code.jquery.com/jquery-2.2.4.min.js" ></script>
+        <script type="text/javascript" src="js/chat.js"></script>
+        <script type="text/javascript" src="js/chatfunctions.js"></script>
+    </head>
+    <body>
+        <div id="content">
+            <h1>
+                A Chat based on Websocket
+            </h1>
+            <div>
+                <div id="room">
+                    <select id="roomlist"></select>
+                    <p id="roomname"></p>
+                    <p id="roomDescription"></p>
+                    <span id="toggleUser">Hide</span>
+                </div>
+                <div>
+                    <div id="messages"></div>
+                    <div id="userList"></div>
+                    <form role="form" id="chat_form">
+                        <div class="form-group">
+                            <input class="form-control" type="text" name="message" id="message" value="" autofocus/>
+                            <input type="hidden" value="1" id="userId" />
+                            <button type="button" id="send" class="btn btn-primary">Send!</button>
+                        </div>
+                    </form>
+                </div>
+            </div>                
+        </div>
+    </body>
+</html>

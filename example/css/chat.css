@@ -1,0 +1,72 @@
+
+/* 
+    Author     : Philipp Voß
+*/
+
+#messages {
+    height: 400px;
+    width: 86%;
+    background-color: #FAF6E5;
+    opacity: .8;
+    border: 1px solid black;
+    overflow-y: auto;
+    overflow-wrap: break-word;
+    display: inline-block
+}
+
+#content {
+    background-color: #F07050;
+}
+
+#userList {
+    display: inline-block;
+    width: 12%;
+    height: 400px;
+    background-color: #FEF9F9;
+    border: 1px solid black;
+    overflow-y: auto;
+    overflow-wrap: break-word;
+    font-size: 9pt;
+}
+
+#message {
+    width: 87%;
+    height: 25px;
+    border: 1px solid black;
+}
+
+#toggleUser {
+    cursor: pointer;
+    margin-left: 88%;
+}
+
+#send {
+    width: 70px;
+    height: 30px;
+}
+
+form {
+    margin: 0;
+}
+
+.label {
+    margin-left: 2px;
+    font-weight: bold;
+    font-family: arial;
+}
+
+.im {
+    
+}
+
+.user {
+    margin-left: 2px;
+}
+
+.msg {
+    background-color: #66B9FF;
+}
+
+.directed {
+    background-color: #66B9FF;
+}
