@@ -3,9 +3,14 @@ module.exports = {
     db: null,
     
     saveChatname: function (client) {
-        var sql = "UPDATE users SET chatname = ? WHERE userId = ? AND isActive = 1";
+        if (this.db === null) {
+            console.log("usermapper missing.");
+        }
+        var sql = "UPDATE users SET chatname = ? WHERE userId = ?";
         this.db.execute(sql, [client.nickname, client.userId], function (err, result, fields) {
-            return !err;
+            if (err) {
+                console.log("Failed to update the chatname.");
+            }
         });
     }
 };

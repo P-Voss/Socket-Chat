@@ -36,13 +36,14 @@ wss.on('connection', function (ws) {
     userService.clients = clients;
     
     var updateRoomList = function(roomlist) {
-        client = userService.getClientByUUID(client_uuid);
-        var clientSocket = client.ws;
-        if (clientSocket.readyState === WebSocket.OPEN) {
-            clientSocket.send(JSON.stringify({
-                "message": roomlist,
-                "type": "roomlist"
-            }));
+        var client = userService.getClientByUUID(client_uuid);
+        if (client !== false) {
+            if (client.ws.readyState === WebSocket.OPEN) {
+                client.ws.send(JSON.stringify({
+                    "message": roomlist,
+                    "type": "roomlist"
+                }));
+            }
         }
     };
     var switchRoom = function (message, rooms) {
@@ -68,17 +69,28 @@ wss.on('connection', function (ws) {
     };
     
     selectRoomlist(updateRoomList);
-
+    
     ws.on('message', function (message) {
         var commandMessage = false;
-        client = userService.getClientByUUID(client_uuid);
+        var client = userService.getClientByUUID(client_uuid);
 
         if (message.indexOf('/init') === 0) {
             commandMessage = true;
-            initUser(client, message);
-            selectRoomlist(function(rooms) {
-                messageService.sendRoomInfo(client, getRoomById(1, rooms))
-            });
+            var idArray = message.split(" ");
+            if (idArray.length >= 2) {
+                if (userService.userAlreadyInChat(idArray[1])) {
+                    userService.forceExit(client, function(){
+                        messageService.systemMessageToClient("You are already connected to the chat.", client);
+                    });
+                } else {
+                    client.userId = idArray[1];
+                    initUserData(client);
+                    selectRoomlist(function(rooms) {
+                        messageService.sendRoomInfo(client, getRoomById(1, rooms));
+                    });
+                    messageService.systemMessageToClient("Welcome, have fun!", client);
+                }
+            }
         }
 
         if (message.indexOf('/nick') === 0) {
@@ -143,9 +155,9 @@ wss.on('connection', function (ws) {
                 clients.splice(i, 1);
             }
         }
-        updateUserList(exitClient.roomId);
-        userService.clients = clients;
         if (exitClient !== null) {
+            updateUserList(exitClient.roomId);
+            userService.clients = clients;
             sendExitMessage(exitClient);
         }
     });
@@ -153,23 +165,15 @@ wss.on('connection', function (ws) {
 
 });
 
-
-function forceExit(client) {
-    for (var i = 0; i < clients.length; i++) {
-        if (clients[i].id === client.id) {
-            clients.splice(i, 1);
-        }
-    }
-    var clientSocket = client.ws;
-    if (clientSocket.readyState === WebSocket.OPEN) {
-        clientSocket.send(JSON.stringify({
-            "name": "System",
-            "message": "You are already connected to the chat.",
-            "type": "disconnect"
-        }));
-    }
-}
-
+/**
+ * @param {Object} client
+ * @returns void
+ * 
+ * Checks the database for the clients userId
+ * Sets clients data to default values if the query fails or returns an empty result
+ * 
+ * Triggers entry text for new client and update of userlist
+ */
 function initUserData(client) {
     var sql = "SELECT chatname AS nickname, usergroup \n\
                 FROM users\n\
@@ -183,42 +187,56 @@ function initUserData(client) {
                 client.nickname = result[0].nickname;
                 client.isAdmin = result[0].usergruppe === "Admin";
             }
-            sendIntroMessage(client);
-            updateUserList(1);
         } else {
+            client.nickname = "Guest";
+            client.isAdmin = false;
             console.log("Error in: initUserData");
-            return false;
         }
+        sendIntroMessage(client);
+        updateUserList(1);
     });
 }
 
+/**
+ * @param {function} cbFunction
+ * @returns void
+ * 
+ * Checks the database for rooms
+ * Creates a default room if the query fails or returns an empty result
+ * 
+ * Triggers callback with the rooms as argument
+ */
 function selectRoomlist(cbFunction) {
     var sql = "SELECT * FROM chatRooms";
     var rooms = [];
     connection.query(sql, function(err, result, fields) {
         if (!err) {
-            for (var i = 0; i < result.length; i++) {
-                rooms.push({
-                    "roomId": result[i].roomId,
-                    "name": result[i].name,
-                    "isHidden": result[i].isHidden === 1,
-                    "creator": result[i].creator,
-                    "description": result[i].description,
-                    "entryMessage": result[i].entryMessage
-                });
+            if (result[0] == null) {
+                rooms.push(getDefaultRoom());
+            } else {
+                for (var i = 0; i < result.length; i++) {
+                    rooms.push({
+                        "roomId": result[i].roomId,
+                        "name": result[i].name,
+                        "isHidden": result[i].isHidden === 1,
+                        "creator": result[i].creator,
+                        "description": result[i].description,
+                        "entryMessage": result[i].entryMessage
+                    });
+                }
             }
         } else {
-            rooms.push({
-                "roomId": 1,
-                "name": "Lobby",
-                "isHidden": false,
-                "creator": 0,
-                "description": "Entry to the chat",
-                "entryMessage": "Hello"
-            });
+            rooms.push(getDefaultRoom());
         }
-        cbFunction(rooms);
+        if (typeof cbFunction === "function") {
+            cbFunction(rooms);
+        }
     });
+}
+
+function getDefaultRoom() {
+    return {"roomId": 1, "name": "Lobby", "isHidden": false, "creator": 0, 
+            "description": "Currently this is the only room in this chat.", "entryMessage": "Hello"};
 }
 
 function getRoomById(roomId, rooms) {
@@ -277,25 +295,11 @@ function updateUserList(roomId) {
 // --- functions called by user input ---
 // --------------------------------------
 
-function initUser(client, message) {
-    var idArray = message.split(" ");
-    if (idArray.length >= 2) {
-        if (client !== false) {
-            if (userService.userAlreadyInChat(idArray[1])) {
-                client.userId = idArray[1];
-                forceExit(client);
-            } else {
-                client.userId = idArray[1];
-                initUserData(client);
-            }
-        }
-    }
-}
 
 /**
- * @param {type} client
- * @param {type} inMessage
- * @returns {undefined}
+ * @param {Object} client
+ * @param {String} inMessage
+ * @returns {void}
  */
 function rollDice(client, inMessage) {
     var diceSpecs = /(\d*)w(\d*)/.exec(inMessage);

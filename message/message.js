@@ -4,8 +4,17 @@ var WebSocket = require('ws');
 
 
 module.exports = {
-    
     userService: null,
+    systemMessageToClient: function (message, client) {
+        if (client.ws.readyState === WebSocket.OPEN) {
+            client.ws.send(JSON.stringify({
+                "name": "System",
+                "message": message,
+                "type": "message"
+            }));
+        }
+    },
+    
     sendMessage: function (sendMessageName, message, type, roomId) {
         var clients = this.userService.getClients();
         var markupMessage = addMarkup(message);

@@ -39,6 +39,16 @@ module.exports = {
                 this.userMapper.saveChatname(client);
             }
         }
+    },
+    forceExit: function (client, messageCallback) {
+        for (var i = 0; i < this.clients.length; i++) {
+            if (this.clients[i].id === client.id) {
+                this.clients.splice(i, 1);
+            }
+        }
+        if (typeof messageCallback === "function") {
+            messageCallback();
+        }
     }
     
 };
