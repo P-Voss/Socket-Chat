@@ -50,5 +50,6 @@ certs
 nbproject
 startit.sh
 stopit.sh
-.gitignore
 
+node_modules
+.idea
